@@ -346,6 +346,13 @@ Utils.callAfterCount = (total, callback) ->
 		count += 1
 		callback?() if count is total
 
+Utils.equal = (a, b) ->
+	if _.isFunction a?.isEqual
+		return a.isEqual(b)
+	if _.isFunction b?.isEqual
+		return b.isEqual(a)
+	return _.isEqual a, b
+
 ######################################################
 # ENVIROMENT FUNCTIONS
 
@@ -1318,7 +1325,8 @@ Utils.boundingFrame = (layer, rootContext=true) ->
 
 Utils.perspectiveProjectionMatrix = (element) ->
 	p = element.perspective
-	m = new Matrix()
+
+	m = Matrix.identity3d()
 	m.m34 = -1 / p if p? and p isnt 0
 	return m
 
@@ -1327,7 +1335,7 @@ Utils.perspectiveMatrix = (element) ->
 	ox = element.perspectiveOriginX * element.width
 	oy = element.perspectiveOriginY * element.height
 	ppm = Utils.perspectiveProjectionMatrix(element)
-	return new Matrix()
+	return Matrix.identity3d()
 		.translate(ox, oy)
 		.multiply(ppm)
 		.translate(-ox, -oy)
@@ -1406,6 +1414,37 @@ Utils.textSize = (text, style={}, constraints={}) ->
 	frame =
 		width: rect.right - rect.left
 		height: rect.bottom - rect.top
+
+
+Utils.throwInStudioOrWarnInProduction = (message) ->
+	if Utils.isFramerStudio()
+		throw new Error(message)
+	# else
+	console.warn(message)
+	return null
+
+Utils.getIdAttributesFromString = (string) ->
+	regex = /id=['"]([^'"]+)["']/g
+	matches = []
+	while (m = regex.exec(string))
+		id = m[1]
+		if id?
+			matches.push(id)
+	matches
+
+Utils.getUniqueId = (prefix = 'id') ->
+	id = prefix
+	count = 1
+	existingElement = document.querySelector("[id='#{id}']")
+	while existingElement?
+		id = "#{prefix}#{count}"
+		existingElement = document.querySelector("[id='#{id}']")
+		count++
+	return id
+
+Utils.escapeForRegex = (string) ->
+	return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+
 
 
 _.extend exports, Utils
